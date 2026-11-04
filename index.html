@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Ferramentas, Materiais e EPIs</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--azul:#1d4ed8;--azul-escuro:#1e3a8a;--verde:#16a34a;--amarelo:#f59e0b;--vermelho:#dc2626;--roxo:#7c3aed;--fundo:#f1f5f9;--card:#fff;--texto:#0f172a;--cinza:#64748b}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Arial,sans-serif;background:var(--fundo);color:var(--texto)}
+header{background:linear-gradient(135deg,var(--azul),var(--azul-escuro));color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:1.25rem}
+header p{margin:4px 0 0;font-size:.85rem;opacity:.85}
+.menu{display:flex;background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:10;overflow-x:auto}
+.menu button{flex:1;min-width:78px;padding:11px 5px;border:0;background:none;font-size:.72rem;font-weight:700;color:var(--cinza);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.menu button span{font-size:1.1rem}
+.menu button.ativo{color:var(--azul);border-bottom:3px solid var(--azul)}
+main{max-width:820px;margin:0 auto;padding:14px}
+.titulo-secao{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 10px;gap:8px;flex-wrap:wrap}
+.titulo-secao h2{margin:0;font-size:1.05rem}
+.contador{background:#e0e7ff;color:var(--azul-escuro);padding:4px 10px;border-radius:999px;font-size:.8rem;font-weight:700}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card-topo{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.card img{width:64px;height:64px;object-fit:cover;border-radius:10px}
+.info{flex:1;min-width:180px}
+.nome{font-weight:800;font-size:1.12rem}
+.quantidades{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.qtd{padding:5px 10px;border-radius:999px;font-size:.8rem;font-weight:700}
+.qverde{background:#dcfce7;color:#166534}
+.qamarelo{background:#fef3c7;color:#92400e}
+.qcinza{background:#e2e8f0;color:#334155}
+.qroxo{background:#ede9fe;color:#5b21b6}
+.detalhe{color:#475569;font-size:.86rem;margin-top:6px}
+button.acao{padding:12px 16px;border:0;border-radius:10px;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer}
+.pegou{background:var(--azul)}
+.devolveu{background:var(--verde)}
+.retirar{background:var(--roxo)}
+.mostrar{background:#e0e7ff;color:var(--azul-escuro);margin-top:12px;width:100%;padding:12px;border:0;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer}
+.mostrar.roxo{background:#ede9fe;color:#5b21b6}
+.form{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+label{display:block;font-weight:600;margin:10px 0 6px}
+input[type=text],input[type=search],input[type=number],select{width:100%;padding:12px;font-size:1rem;border:1px solid #cbd5e1;border-radius:10px}
+input:focus,select:focus{outline:2px solid var(--azul);border-color:var(--azul)}
+.foto{margin-top:8px;width:100%}
+.botoes{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{padding:13px 16px;border:0;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer}
+.salvar{background:var(--azul);color:#fff;flex:1;min-width:140px}
+.roxo{background:var(--roxo);color:#fff;flex:1;min-width:140px}
+.cancelar{background:#e2e8f0;color:#334155}
+.vazio{text-align:center;color:var(--cinza);padding:24px;background:#fff;border-radius:14px}
+.historico{border-left:5px solid var(--azul);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.aberto{border-left-color:var(--amarelo)}
+.retirada{border-left-color:var(--roxo)}
+.unidade{border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f8fafc}
+.unidade .info{min-width:150px}
+.status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.76rem;font-weight:700}
+.disponivel{background:#dcfce7;color:#166534}
+.emprestada{background:#fef3c7;color:#92400e}
+.retirado{background:#ede9fe;color:#5b21b6}
+.pessoa-acoes{display:flex;gap:8px}
+.mini{padding:9px 12px;border:0;border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer}
+.editar{background:#e0e7ff;color:var(--azul-escuro)}
+.excluir{background:#fee2e2;color:var(--vermelho)}
+.busca{margin-bottom:12px}
+.filtros{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.filtro{padding:10px 14px;border:1px solid #cbd5e1;background:#fff;border-radius:999px;font-weight:700;font-size:.86rem;color:var(--cinza);cursor:pointer}
+.filtro.ativo{background:var(--azul);border-color:var(--azul);color:#fff}
+.atalhos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.atalho{background:#fff;border:0;border-radius:14px;padding:16px;text-align:left;font-weight:700;font-size:.95rem;color:var(--texto);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;gap:10px;align-items:center}
+.atalho span{font-size:1.4rem}
+.aviso{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px;border-radius:12px;margin-bottom:12px;font-size:.9rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>🔧 Controle de Ferramentas, Materiais e EPIs</h1>
+  <p>Almoxarifado de obra — dados compartilhados</p>
+</header>
+
+<nav class="menu">
+  <button id="tab-inicio" class="ativo" onclick="mostrarAba('inicio')"><span>🏠</span>Início</button>
+  <button id="tab-ferramentas" onclick="mostrarAba('ferramentas')"><span>🛠️</span>Ferramentas</button>
+  <button id="tab-materiais" onclick="mostrarAba('materiais')"><span>🧱</span>Materiais</button>
+  <button id="tab-epis" onclick="mostrarAba('epis')"><span>🦺</span>EPIs</button>
+  <button id="tab-funcionarios" onclick="mostrarAba('funcionarios')"><span>👷</span>Funcionários</button>
+  <button id="tab-historico" onclick="mostrarAba('historico')"><span>📋</span>Histórico</button>
+  <button id="tab-cadastros" onclick="mostrarAba('cadastros')"><span>➕</span>Cadastros</button>
+</nav>
+
+<main id="conteudo"></main>
+
+<script>
+const SUPABASE_URL='https://glbhdshcgxkwyfahikzo.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdsYmhkc2hjZ3hrd3lmYWhpa3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4MjgyMjMsImV4cCI6MjEwOTQwNDIyM30.42lYRpxS9BPIRMhNCNl3jE-n3XRil8d022AP59o5fts';
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let dados={ferramentas:[],materiais:[],epis:[],pessoas:[],historico:[],retiradas:[],retiradasEpi:[]};
+let carregando=true, erro=null;
+let buscaFerramenta='', buscaMaterial='', buscaEpi='', buscaFuncionario='', buscaHistorico='', filtroHistorico='todos';
+let mostrarDisponiveis={}, mostrarEmprestadas={}, mostrarMateriais={}, mostrarEpiDisponiveis={};
+let mostrarTiposFerramenta=false, mostrarTiposMaterial=false, mostrarFuncionariosCad=false, mostrarEpiCad=false;
+
+async function carregarDados(){
+  carregando=true;erro=null;render();
+  try{
+    const [f,m,e,p,h,rm,re]=await Promise.all([
+      supabase.from('ferramentas').select('*').order('nome'),
+      supabase.from('materiais').select('*').order('nome'),
+      supabase.from('epis').select('*').order('nome'),
+      supabase.from('funcionarios').select('*').order('nome'),
+      supabase.from('historico_ferramentas').select('*').order('saida',{ascending:false}),
+      supabase.from('retiradas_materiais').select('*').order('saida',{ascending:false}),
+      supabase.from('retiradas_epis').select('*').order('saida',{ascending:false})
+    ]);
+    const falha=[f,m,e,p,h,rm,re].find(r=>r.error);
+    if(falha) throw falha.error;
+    dados={ferramentas:f.data,materiais:m.data,epis:e.data,pessoas:p.data,historico:h.data,retiradas:rm.data,retiradasEpi:re.data};
+  }catch(ex){erro=ex.message||'Erro ao carregar dados.';}
+  carregando=false;render();
+}
+
+function fmt(iso){
+  if(!iso) return '—';
+  const d=new Date(iso);
+  return d.toLocaleDateString('pt-BR')+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function esc(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));}
+function normalizar(t){return String(t??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function tratarErro(ex){alert('Erro: '+(ex.message||ex));}
+
+let aba='inicio';
+function mostrarAba(n){aba=n;document.querySelectorAll('.menu button').forEach(b=>b.classList.remove('ativo'));document.getElementById('tab-'+n).classList.add('ativo');window.scrollTo(0,0);render();}
+function render(){
+  const c=document.getElementById('conteudo');
+  if(carregando){c.innerHTML='<div class="vazio">Carregando dados compartilhados...</div>';return;}
+  if(erro){c.innerHTML=`<div class="aviso"><b>Não foi possível carregar os dados.</b><br>${esc(erro)}<br><br>Verifique se as tabelas e as regras de acesso foram criadas no Supabase.</div><button class="btn salvar" onclick="carregarDados()">Tentar novamente</button>`;return;}
+  const telas={inicio:verInicio,ferramentas:verFerramentas,materiais:verMateriais,epis:verEpis,funcionarios:verFuncionarios,historico:verHistorico,cadastros:verCadastros};
+  c.innerHTML=telas[aba]();
+}
+function alternarDisponiveis(tipo){mostrarDisponiveis[tipo]=!mostrarDisponiveis[tipo];render();}
+function alternarEmprestadas(tipo){mostrarEmprestadas[tipo]=!mostrarEmprestadas[tipo];render();}
+function alternarMateriais(tipo){mostrarMateriais[tipo]=!mostrarMateriais[tipo];render();}
+function alternarEpiDisponiveis(tipo){mostrarEpiDisponiveis[tipo]=!mostrarEpiDisponiveis[tipo];render();}
+function alternarTiposFerramenta(){mostrarTiposFerramenta=!mostrarTiposFerramenta;render();}
+function alternarTiposMaterial(){mostrarTiposMaterial=!mostrarTiposMaterial;render();}
+function alternarFuncionariosCad(){mostrarFuncionariosCad=!mostrarFuncionariosCad;render();}
+function alternarEpiCad(){mostrarEpiCad=!mostrarEpiCad;render();}
+
+async function devolverDoHistorico(idMovimento){
+  const h=dados.historico.find(x=>x.id===idMovimento);
+  if(!h||h.devolucao){alert('Esta movimentação já foi devolvida.');return;}
+  const f=dados.ferramentas.find(x=>x.id===h.ferramenta_id);
+  if(!f||f.status!=='Emprestada'){alert('Não foi possível encontrar a unidade emprestada.');return;}
+  if(!confirm(`Confirmar a devolução de ${f.tipo} (${f.nome}) que está com ${h.pessoa}?`)) return;
+  const agora=new Date().toISOString();
+  const {error:e1}=await supabase.from('historico_ferramentas').update({devolucao:agora}).eq('id',idMovimento);
+  const {error:e2}=await supabase.from('ferramentas').update({status:'Disponível',pessoa:null,saida:null}).eq('id',f.id);
+  if(e1||e2){tratarErro(e1||e2);return;}
+  await carregarDados();alert('Devolução registrada com sucesso.');
+}
+
+function verInicio(){
+  const total=dados.ferramentas.length;
+  const emprestadas=dados.ferramentas.filter(f=>f.status==='Emprestada').length;
+  const disponiveis=total-emprestadas;
+  const abertos=dados.historico.filter(h=>!h.devolucao);
+  const epiDisp=dados.epis.filter(e=>e.status==='Disponível').length;
+  return `
+  <div class="titulo-secao"><h2>Resumo do almoxarifado</h2></div>
+  <div class="atalhos">
+    <button class="atalho" onclick="mostrarAba('ferramentas')"><span>🛠️</span><div>${total} unidades<br><small style="font-weight:500;color:var(--cinza)">${disponiveis} disponíveis</small></div></button>
+    <button class="atalho" onclick="mostrarAba('materiais')"><span>🧱</span><div>${dados.materiais.length} materiais<br><small style="font-weight:500;color:var(--cinza)">Retirada sem devolução</small></div></button>
+    <button class="atalho" onclick="mostrarAba('epis')"><span>🦺</span><div>${dados.epis.length} EPIs<br><small style="font-weight:500;color:var(--cinza)">${epiDisp} disponíveis</small></div></button>
+    <button class="atalho" onclick="mostrarAba('funcionarios')"><span>👷</span><div>${dados.pessoas.length} funcionários<br><small style="font-weight:500;color:var(--cinza)">Gerenciar lista</small></div></button>
+    <button class="atalho" onclick="mostrarAba('historico')"><span>📋</span><div>${abertos.length} em aberto<br><small style="font-weight:500;color:var(--cinza)">Ver histórico</small></div></button>
+  </div>
+  <div class="titulo-secao"><h2>Movimentações em aberto</h2></div>
+  ${abertos.length?abertos.map(h=>{
+    const f=dados.ferramentas.find(x=>x.id===h.ferramenta_id);
+    return `<div class="card historico aberto">
+      <div class="info">
+        <div class="nome">${esc(h.tipo)}</div>
+        <div class="detalhe">${esc(h.ferramenta)} com <b>${esc(h.pessoa)}</b></div>
+        <div class="detalhe">Saída: ${fmt(h.saida)}</div>
+      </div>
+      ${f?`<button class="acao devolveu" onclick="devolverDoHistorico(${h.id})">Devolveu</button>`:''}
+    </div>`;}).join(''):'<div class="vazio">Nenhuma ferramenta emprestada no momento.</div>'}`;
+}
+
+function verFerramentas(){
+  const tipos={};
+  dados.ferramentas.forEach(f=>{const t=f.tipo;tipos[t]=tipos[t]||[];tipos[t].push(f);});
+  const nomes=Object.keys(tipos).filter(t=>normalizar(t).includes(normalizar(buscaFerramenta))).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const total=dados.ferramentas.length, disp=dados.ferramentas.filter(f=>f.status==='Disponível').length, emp=total-disp;
+  return `
+  <div class="titulo-secao"><h2>Ferramentas</h2><span class="contador">${total} unidades</span></div>
+  <input class="busca" type="search" placeholder="🔎 Buscar tipo de ferramenta..." value="${esc(buscaFerramenta)}" oninput="buscaFerramenta=this.value;render()">
+  ${nomes.length?nomes.map(tipo=>{
+    const unidades=tipos[tipo], disponiveis=unidades.filter(f=>f.status==='Disponível'), emprestadas=unidades.filter(f=>f.status==='Emprestada'), foto=unidades.find(f=>f.foto)?.foto;
+    return `<div class="card">
+      <div class="card-topo">
+        ${foto?`<img src="${esc(foto)}" alt="">`:''}
+        <div class="info">
+          <div class="nome">${esc(tipo)}</div>
+          <div class="quantidades"><span class="qtd qverde">${disponiveis.length} disponível(is)</span><span class="qtd qamarelo">${emprestadas.length} emprestada(s)</span><span class="qtd qcinza">${unidades.length} no total</span></div>
+        </div>
+      </div>
+      ${disponiveis.length?`<button class="mostrar" onclick="alternarDisponiveis('${esc(tipo)}')">${mostrarDisponiveis[tipo]?'Esconder disponíveis':'Mostrar disponíveis ('+disponiveis.length+')'}</button>`:''}
+      ${mostrarDisponiveis[tipo]?disponiveis.map(f=>`<div class="unidade"><div class="info"><div class="nome" style="font-size:.96rem">${esc(f.nome)}</div><span class="status disponivel">Disponível</span><div class="detalhe">No almoxarifado</div></div><button class="acao pegou" onclick="telaPegar(${f.id})">Pegou</button></div>`).join(''):''}
+      ${emprestadas.length?`<button class="mostrar" onclick="alternarEmprestadas('${esc(tipo)}')">${mostrarEmprestadas[tipo]?'Esconder emprestadas':'Mostrar emprestadas ('+emprestadas.length+')'}</button>`:''}
+      ${mostrarEmprestadas[tipo]?emprestadas.map(f=>`<div class="unidade"><div class="info"><div class="nome" style="font-size:.96rem">${esc(f.nome)}</div><span class="status emprestada">Emprestada</span><div class="detalhe">Com <b>${esc(f.pessoa)}</b> desde ${fmt(f.saida)}</div></div><button class="acao devolveu" onclick="telaDevolver(${f.id})">Devolveu</button></div>`).join(''):''}
+    </div>`;}).join(''):'<div class="vazio">Nenhuma ferramenta encontrada.</div>'}`;
+}
+
+let ferramentaSelecionada=null;
+function telaPegar(id){
+  ferramentaSelecionada=id;
+  const f=dados.ferramentas.find(x=>x.id===id);
+  if(f.status!=='Disponível'){alert('Esta unidade já está emprestada.');return;}
+  document.getElementById('conteudo').innerHTML=`
+  <div class="form">
+    <h2>Quem pegou: ${esc(f.tipo)}</h2>
+    <p class="detalhe">Unidade: <b>${esc(f.nome)}</b></p>
+    <label>Escolha um funcionário cadastrado</label>
+    <select id="selPessoa" onchange="document.getElementById('novoNome').value=''">
+      <option value="">— Selecione —</option>
+      ${dados.pessoas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)}</option>`).join('')}
+    </select>
+    <label>Ou digite um nome novo</label>
+    <input type="text" id="novoNome" placeholder="Nome do funcionário">
+    <p class="detalhe">Data e hora automáticas: <b>${fmt(new Date().toISOString())}</b></p>
+    <div class="botoes"><button class="btn salvar" onclick="confirmarPegar()">Salvar empréstimo</button><button class="btn cancelar" onclick="mostrarAba('ferramentas')">Cancelar</button></div>
+  </div>`;
+}
+async function confirmarPegar(){
+  const f=dados.ferramentas.find(x=>x.id===ferramentaSelecionada);
+  if(!f||f.status!=='Disponível'){alert('Esta unidade não está disponível.');return;}
+  const sel=document.getElementById('selPessoa').value, novo=document.getElementById('novoNome').value.trim(), pessoa=sel||novo;
+  if(!pessoa){alert('Escolha um funcionário cadastrado ou digite um nome.');return;}
+  const agora=new Date().toISOString();
+  if(!sel){
+    const {data,error}=await supabase.from('funcionarios').insert({nome:pessoa}).select().single();
+    if(error){tratarErro(error);return;}
+  }
+  const {error:e1}=await supabase.from('ferramentas').update({status:'Emprestada',pessoa,saida:agora}).eq('id',f.id);
+  const {error:e2}=await supabase.from('historico_ferramentas').insert({ferramenta_id:f.id,ferramenta:f.nome,tipo:f.tipo,pessoa,saida:agora,devolucao:null});
+  if(e1||e2){tratarErro(e1||e2);return;}
+  await carregarDados();mostrarAba('ferramentas');
+}
+function telaDevolver(id){
+  const f=dados.ferramentas.find(x=>x.id===id);
+  if(f.status!=='Emprestada'){alert('Só é possível devolver uma ferramenta emprestada.');return;}
+  const h=dados.historico.find(x=>x.ferramenta_id===id&&!x.devolucao);
+  if(!h){alert('Movimentação em aberto não encontrada.');return;}
+  if(confirm(`Confirmar a devolução de ${f.tipo} (${f.nome}) que está com ${f.pessoa}?`)) devolverDoHistorico(h.id);
+}
+
+function verMateriais(){
+  const tipos={};
+  dados.materiais.forEach(m=>{const t=m.tipo;tipos[t]=tipos[t]||[];tipos[t].push(m);});
+  const nomes=Object.keys(tipos).filter(t=>normalizar(t).includes(normalizar(buscaMaterial))).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  return `
+  <div class="titulo-secao"><h2>Materiais</h2><span class="contador">${dados.materiais.length} unidades</span></div>
+  <input class="busca" type="search" placeholder="🔎 Buscar material..." value="${esc(buscaMaterial)}" oninput="buscaMaterial=this.value;render()">
+  <div class="form">
+    <h3>Cadastrar material</h3>
+    <label>Nome do material</label><input type="text" id="nomeMaterial" placeholder="Ex.: Parafuso">
+    <label>Quantidade</label><input type="number" id="qtdMaterial" min="1" value="1">
+    <div class="botoes"><button class="btn roxo" onclick="cadastrarMaterial()">Cadastrar material</button></div>
+    <p class="detalhe">Materiais são para <b>retirada sem devolução</b>.</p>
+  </div>
+  ${nomes.length?nomes.map(tipo=>{
+    const unidades=tipos[tipo], disponiveis=unidades.filter(m=>m.status==='Disponível'), retiradas=unidades.filter(m=>m.status==='Retirado');
+    return `<div class="card">
+      <div class="card-topo"><div class="info"><div class="nome">${esc(tipo)}</div>
+      <div class="quantidades"><span class="qtd qverde">${disponiveis.length} disponível(is)</span><span class="qtd qroxo">${retiradas.length} retirada(s)</span><span class="qtd qcinza">${unidades.length} no total</span></div></div></div>
+      ${disponiveis.length?`<button class="mostrar roxo" onclick="alternarMateriais('${esc(tipo)}')">${mostrarMateriais[tipo]?'Esconder disponíveis':'Mostrar disponíveis ('+disponiveis.length+')'}</button>`:''}
+      ${mostrarMateriais[tipo]?disponiveis.map(m=>`<div class="unidade"><div class="info"><div class="nome" style="font-size:.96rem">${esc(m.nome)}</div><span class="status disponivel">Disponível</span><div class="detalhe">No almoxarifado</div></div><button class="acao retirar" onclick="telaRetirarMaterial(${m.id})">Retirar</button></div>`).join(''):''}
+      ${retiradas.length?`<div class="detalhe" style="margin-top:10px"><b>${retiradas.length}</b> unidade(s) já retirada(s) — a retirada não possui devolução.</div>`:''}
+    </div>`;}).join(''):'<div class="vazio">Nenhum material cadastrado.</div>'}`;
+}
+let materialSelecionado=null;
+function telaRetirarMaterial(id){
+  materialSelecionado=id;
+  const m=dados.materiais.find(x=>x.id===id);
+  document.getElementById('conteudo').innerHTML=`
+  <div class="form">
+    <h2>Retirada de material</h2>
+    <p class="detalhe">Material: <b>${esc(m.tipo)}</b><br>Unidade: <b>${esc(m.nome)}</b></p>
+    <label>Quem está retirando</label>
+    <select id="selPessoaMat" onchange="document.getElementById('novoNomeMat').value=''">
+      <option value="">— Selecione —</option>
+      ${dados.pessoas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)}</option>`).join('')}
+    </select>
+    <label>Ou digite um nome novo</label><input type="text" id="novoNomeMat" placeholder="Nome do funcionário">
+    <p class="detalhe">Data e hora automáticas: <b>${fmt(new Date().toISOString())}</b><br>A retirada é definitiva: não há devolução.</p>
+    <div class="botoes"><button class="btn roxo" onclick="confirmarRetirada()">Confirmar retirada</button><button class="btn cancelar" onclick="mostrarAba('materiais')">Cancelar</button></div>
+  </div>`;
+}
+async function confirmarRetirada(){
+  const m=dados.materiais.find(x=>x.id===materialSelecionado);
+  const sel=document.getElementById('selPessoaMat').value, novo=document.getElementById('novoNomeMat').value.trim(), pessoa=sel||novo;
+  if(!pessoa){alert('Informe quem está retirando o material.');return;}
+  const agora=new Date().toISOString();
+  if(!sel){const {error}=await supabase.from('funcionarios').insert({nome:pessoa});if(error){tratarErro(error);return;}}
+  const {error:e1}=await supabase.from('materiais').update({status:'Retirado',pessoa,saida:agora}).eq('id',m.id);
+  const {error:e2}=await supabase.from('retiradas_materiais').insert({material_id:m.id,material:m.tipo,unidade:m.nome,pessoa,saida:agora});
+  if(e1||e2){tratarErro(e1||e2);return;}
+  await carregarDados();mostrarAba('materiais');alert('Retirada registrada com sucesso.');
+}
+async function cadastrarMaterial(){
+  const tipo=document.getElementById('nomeMaterial').value.trim(), qtd=parseInt(document.getElementById('qtdMaterial').value)||1;
+  if(!tipo){alert('Informe o nome do material.');return;}
+  if(qtd<1){alert('A quantidade deve ser pelo menos 1.');return;}
+  const registros=[];for(let i=1;i<=qtd;i++)registros.push({nome:qtd>1?`${tipo} ${i}`:tipo,tipo,status:'Disponível',pessoa:null,saida:null});
+  const {error}=await supabase.from('materiais').insert(registros);
+  if(error){tratarErro(error);return;}
+  await carregarDados();alert(`${qtd} unidade(s) de ${tipo} cadastradas com sucesso.`);
+}
+
+function verEpis(){
+  const tipos={};
+  dados.epis.forEach(e=>{const t=e.tipo;tipos[t]=tipos[t]||[];tipos[t].push(e);});
+  const nomes=Object.keys(tipos).filter(t=>normalizar(t).includes(normalizar(buscaEpi))).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  return `
+  <div class="titulo-secao"><h2>EPIs</h2><span class="contador">${dados.epis.length} unidades</span></div>
+  <input class="busca" type="search" placeholder="🔎 Buscar EPI..." value="${esc(buscaEpi)}" oninput="buscaEpi=this.value;render()">
+  <div class="form">
+    <h3>Cadastrar EPI</h3>
+    <label>Nome do EPI</label><input type="text" id="nomeEpi" placeholder="Ex.: Capacete">
+    <label>Quantidade</label><input type="number" id="qtdEpi" min="1" value="1">
+    <div class="botoes"><button class="btn roxo" onclick="cadastrarEpi()">Cadastrar EPI</button></div>
+    <p class="detalhe">EPI é apenas para <b>retirada</b>. Não há devolução.</p>
+  </div>
+  ${nomes.length?nomes.map(tipo=>{
+    const unidades=tipos[tipo], disponiveis=unidades.filter(e=>e.status==='Disponível'), retirados=unidades.filter(e=>e.status==='Retirado');
+    return `<div class="card">
+      <div class="card-topo"><div class="info"><div class="nome">${esc(tipo)}</div>
+      <div class="quantidades"><span class="qtd qverde">${disponiveis.length} disponível(is)</span><span class="qtd qroxo">${retirados.length} retirado(s)</span><span class="qtd qcinza">${unidades.length} no total</span></div></div></div>
+      ${disponiveis.length?`<button class="mostrar roxo" onclick="alternarEpiDisponiveis('${esc(tipo)}')">${mostrarEpiDisponiveis[tipo]?'Esconder disponíveis':'Mostrar disponíveis ('+disponiveis.length+')'}</button>`:''}
+      ${mostrarEpiDisponiveis[tipo]?disponiveis.map(e=>`<div class="unidade"><div class="info"><div class="nome" style="font-size:.96rem">${esc(e.nome)}</div><span class="status disponivel">Disponível</span><div class="detalhe">No almoxarifado</div></div><button class="acao retirar" onclick="telaRetirarEpi(${e.id})">Retirar</button></div>`).join(''):''}
+      ${retirados.length?`<div class="detalhe" style="margin-top:10px"><b>${retirados.length}</b> unidade(s) já retirada(s) — o EPI não possui devolução.</div>`:''}
+    </div>`;}).join(''):'<div class="vazio">Nenhum EPI cadastrado.</div>'}`;
+}
+let epiSelecionado=null;
+function telaRetirarEpi(id){
+  epiSelecionado=id;
+  const e=dados.epis.find(x=>x.id===id);
+  document.getElementById('conteudo').innerHTML=`
+  <div class="form">
+    <h2>Retirada de EPI</h2>
+    <p class="detalhe">EPI: <b>${esc(e.tipo)}</b><br>Unidade: <b>${esc(e.nome)}</b></p>
+    <label>Quem está retirando</label>
+    <select id="selPessoaEpi" onchange="document.getElementById('novoNomeEpi').value=''">
+      <option value="">— Selecione —</option>
+      ${dados.pessoas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)}</option>`).join('')}
+    </select>
+    <label>Ou digite um nome novo</label><input type="text" id="novoNomeEpi" placeholder="Nome do funcionário">
+    <p class="detalhe">Data e hora automáticas: <b>${fmt(new Date().toISOString())}</b><br>A retirada é definitiva: não há devolução.</p>
+    <div class="botoes"><button class="btn roxo" onclick="confirmarRetiradaEpi()">Confirmar retirada</button><button class="btn cancelar" onclick="mostrarAba('epis')">Cancelar</button></div>
+  </div>`;
+}
+async function confirmarRetiradaEpi(){
+  const e=dados.epis.find(x=>x.id===epiSelecionado);
+  const sel=document.getElementById('selPessoaEpi').value, novo=document.getElementById('novoNomeEpi').value.trim(), pessoa=sel||novo;
+  if(!pessoa){alert('Informe quem está retirando o EPI.');return;}
+  const agora=new Date().toISOString();
+  if(!sel){const {error}=await supabase.from('funcionarios').insert({nome:pessoa});if(error){tratarErro(error);return;}}
+  const {error:e1}=await supabase.from('epis').update({status:'Retirado',pessoa,data_retirada:agora}).eq('id',e.id);
+  const {error:e2}=await supabase.from('retiradas_epis').insert({epi_id:e.id,epi:e.nome,tipo:e.tipo,pessoa,saida:agora});
+  if(e1||e2){tratarErro(e1||e2);return;}
+  await carregarDados();mostrarAba('epis');alert('Retirada de EPI registrada com sucesso.');
+}
+async function cadastrarEpi(){
+  const tipo=document.getElementById('nomeEpi').value.trim(), qtd=parseInt(document.getElementById('qtdEpi').value)||1;
+  if(!tipo){alert('Informe o nome do EPI.');return;}
+  if(qtd<1){alert('A quantidade deve ser pelo menos 1.');return;}
+  const registros=[];for(let i=1;i<=qtd;i++)registros.push({nome:qtd>1?`${tipo} ${i}`:tipo,tipo,status:'Disponível',pessoa:null,data_retirada:null});
+  const {error}=await supabase.from('epis').insert(registros);
+  if(error){tratarErro(error);return;}
+  await carregarDados();alert(`${qtd} unidade(s) de ${tipo} cadastradas com sucesso.`);
+}
+
+function verFuncionarios(){
+  const lista=dados.pessoas.filter(p=>normalizar(p.nome).includes(normalizar(buscaFuncionario)));
+  const emprestimos=p=>dados.historico.filter(h=>h.pessoa===p.nome&&!h.devolucao).length;
+  const retiradas=p=>dados.retiradas.filter(r=>r.pessoa===p.nome).length;
+  const epis=p=>dados.retiradasEpi.filter(r=>r.pessoa===p.nome).length;
+  return `
+  <div class="titulo-secao"><h2>Funcionários</h2><span class="contador">${lista.length}</span></div>
+  <input class="busca" type="search" placeholder="🔎 Buscar funcionário..." value="${esc(buscaFuncionario)}" oninput="buscaFuncionario=this.value;render()">
+  <div class="form">
+    <label>Cadastrar novo funcionário</label><input type="text" id="nomePessoa" placeholder="Nome do funcionário">
+    <div class="botoes"><button class="btn salvar" onclick="cadastrarPessoa()">Cadastrar funcionário</button></div>
+  </div>
+  ${lista.length?lista.map(p=>`
+  <div class="card">
+    <div class="info">
+      <div class="nome">${esc(p.nome)}</div>
+      <div class="detalhe">${emprestimos(p)?`${emprestimos(p)} ferramenta(s) em aberto`:''}${emprestimos(p)&&(retiradas(p)||epis(p))?' • ':''}${retiradas(p)?`${retiradas(p)} material(is)`:''}${(retiradas(p)&&epis(p))?' • ':''}${epis(p)?`${epis(p)} EPI(s)`:''}</div>
+      ${!emprestimos(p)&&!retiradas(p)&&!epis(p)?'<div class="detalhe">Sem movimentações</div>':''}
+    </div>
+    <div class="pessoa-acoes">
+      <button class="mini editar" onclick="editarPessoa(${p.id},'${esc(p.nome)}')">Editar</button>
+      <button class="mini excluir" onclick="excluirPessoa(${p.id},'${esc(p.nome)}')">Excluir</button>
+    </div>
+  </div>`).join(''):'<div class="vazio">Nenhum funcionário encontrado.</div>'}`;
+}
+async function cadastrarPessoa(){
+  const nome=document.getElementById('nomePessoa').value.trim();
+  if(!nome){alert('Informe o nome do funcionário.');return;}
+  if(dados.pessoas.some(p=>normalizar(p.nome)===normalizar(nome))){alert('Este funcionário já está cadastrado.');return;}
+  const {error}=await supabase.from('funcionarios').insert({nome});
+  if(error){tratarErro(error);return;}
+  await carregarDados();
+}
+async function editarPessoa(id,nomeAntigo){
+  const novo=prompt('Editar nome do funcionário:',nomeAntigo);
+  if(novo===null) return;
+  const nome=novo.trim();
+  if(!nome){alert('O nome não pode ficar vazio.');return;}
+  const {error}=await supabase.from('funcionarios').update({nome}).eq('id',id);
+  if(error){tratarErro(error);return;}
+  await Promise.all([
+    supabase.from('ferramentas').update({pessoa:nome}).eq('pessoa',nomeAntigo),
+    supabase.from('materiais').update({pessoa:nome}).eq('pessoa',nomeAntigo),
+    supabase.from('epis').update({pessoa:nome}).eq('pessoa',nomeAntigo),
+    supabase.from('historico_ferramentas').update({pessoa:nome}).eq('pessoa',nomeAntigo),
+    supabase.from('retiradas_materiais').update({pessoa:nome}).eq('pessoa',nomeAntigo),
+    supabase.from('retiradas_epis').update({pessoa:nome}).eq('pessoa',nomeAntigo)
+  ]);
+  await carregarDados();
+}
+async function excluirPessoa(id,nome){
+  const emAberto=dados.historico.some(h=>h.pessoa===nome&&!h.devolucao)||dados.ferramentas.some(f=>f.pessoa===nome);
+  if(emAberto){alert('Não é possível excluir: este funcionário possui ferramenta emprestada.');return;}
+  if(!confirm(`Excluir ${nome} da lista de funcionários?`)) return;
+  const {error}=await supabase.from('funcionarios').delete().eq('id',id);
+  if(error){tratarErro(error);return;}
+  await carregarDados();
+}
+
+function verHistorico(){
+  let lista=[...dados.historico];
+  if(filtroHistorico==='abertos') lista=lista.filter(h=>!h.devolucao);
+  if(filtroHistorico==='devolvidas') lista=lista.filter(h=>h.devolucao);
+  if(buscaHistorico) lista=lista.filter(h=>normalizar(h.tipo+' '+h.ferramenta+' '+h.pessoa).includes(normalizar(buscaHistorico)));
+  return `
+  <div class="titulo-secao"><h2>Histórico de ferramentas</h2><span class="contador">${lista.length}</span></div>
+  <input class="busca" type="search" placeholder="🔎 Buscar por ferramenta ou funcionário..." value="${esc(buscaHistorico)}" oninput="buscaHistorico=this.value;render()">
+  <div class="filtros">
+    <button class="filtro ${filtroHistorico==='todos'?'ativo':''}" onclick="filtroHistorico='todos';render()">Todas</button>
+    <button class="filtro ${filtroHistorico==='abertos'?'ativo':''}" onclick="filtroHistorico='abertos';render()">Em aberto</button>
+    <button class="filtro ${filtroHistorico==='devolvidas'?'ativo':''}" onclick="filtroHistorico='devolvidas';render()">Devolvidas</button>
+  </div>
+  ${lista.length?lista.map(h=>`
+  <div class="card historico ${h.devolucao?'':'aberto'}">
+    <div class="info">
+      <div class="nome">${esc(h.tipo)}</div>
+      <div class="detalhe">Unidade: ${esc(h.ferramenta)}</div>
+      <div class="detalhe">Pegou: <b>${esc(h.pessoa)}</b></div>
+      <div class="detalhe">Saída: ${fmt(h.saida)}</div>
+      <div class="detalhe">Devolução: ${fmt(h.devolucao)}</div>
+      <span class="status ${h.devolucao?'disponivel':'emprestada'}">${h.devolucao?'Devolvida':'Em aberto'}</span>
+    </div>
+    ${!h.devolucao?`<button class="acao devolveu" onclick="devolverDoHistorico(${h.id})">Devolveu</button>`:''}
+  </div>`).join(''):'<div class="vazio">Nenhuma movimentação encontrada.</div>'}
+  <div class="titulo-secao" style="margin-top:18px"><h2>Retiradas de materiais</h2><span class="contador">${dados.retiradas.length}</span></div>
+  ${dados.retiradas.length?dados.retiradas.map(r=>`
+  <div class="card historico retirada"><div class="info"><div class="nome">${esc(r.material)}</div><div class="detalhe">Unidade: ${esc(r.unidade)}</div><div class="detalhe">Retirou: <b>${esc(r.pessoa)}</b></div><div class="detalhe">Data e hora: ${fmt(r.saida)}</div><span class="status retirado">Retirado — sem devolução</span></div></div>`).join(''):'<div class="vazio">Nenhuma retirada de material registrada.</div>'}
+  <div class="titulo-secao" style="margin-top:18px"><h2>Retiradas de EPIs</h2><span class="contador">${dados.retiradasEpi.length}</span></div>
+  ${dados.retiradasEpi.length?dados.retiradasEpi.map(r=>`
+  <div class="card historico retirada"><div class="info"><div class="nome">${esc(r.tipo)}</div><div class="detalhe">Unidade: ${esc(r.epi)}</div><div class="detalhe">Retirou: <b>${esc(r.pessoa)}</b></div><div class="detalhe">Data e hora: ${fmt(r.saida)}</div><span class="status retirado">Retirado — sem devolução</span></div></div>`).join(''):'<div class="vazio">Nenhuma retirada de EPI registrada.</div>'}`;
+}
+
+function verCadastros(){
+  const tiposFerramenta=[...new Set(dados.ferramentas.map(f=>f.tipo))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const tiposMaterial=[...new Set(dados.materiais.map(m=>m.tipo))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const tiposEpi=[...new Set(dados.epis.map(e=>e.tipo))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  return `
+  <div class="titulo-secao"><h2>Cadastros</h2></div>
+  <div class="form">
+    <h3>Cadastrar ferramentas</h3>
+    <label>Nome da ferramenta</label><input type="text" id="nomeFerramenta" placeholder="Ex.: Martelete">
+    <label>Quantidade</label><input type="number" id="qtdFerramenta" min="1" value="1">
+    <label>Foto (opcional)</label><input class="foto" type="file" id="fotoFerramenta" accept="image/*">
+    <div class="botoes"><button class="btn salvar" onclick="cadastrarFerramenta()">Cadastrar ferramentas</button></div>
+  </div>
+  <div class="form">
+    <h3>Cadastrar material</h3>
+    <label>Nome do material</label><input type="text" id="nomeMaterialCad" placeholder="Ex.: Parafuso">
+    <label>Quantidade</label><input type="number" id="qtdMaterialCad" min="1" value="1">
+    <div class="botoes"><button class="btn roxo" onclick="cadastrarMaterialCad()">Cadastrar material</button></div>
+  </div>
+  <div class="form">
+    <h3>Cadastrar EPI</h3>
+    <label>Nome do EPI</label><input type="text" id="nomeEpiCad" placeholder="Ex.: Capacete">
+    <label>Quantidade</label><input type="number" id="qtdEpiCad" min="1" value="1">
+    <div class="botoes"><button class="btn roxo" onclick="cadastrarEpiCad()">Cadastrar EPI</button></div>
+  </div>
+  <div class="form">
+    <h3>Cadastrar funcionário</h3>
+    <label>Nome</label><input type="text" id="nomePessoaCad" placeholder="Ex.: Renato">
+    <div class="botoes"><button class="btn salvar" onclick="cadastrarPessoaCad()">Cadastrar funcionário</button></div>
+  </div>
+  <div class="titulo-secao"><h2>Tipos de ferramenta</h2><span class="contador">${tiposFerramenta.length}</span></div>
+  <button class="mostrar" onclick="alternarTiposFerramenta()">${mostrarTiposFerramenta?'Esconder tipos de ferramenta':'Mostrar tipos de ferramenta ('+tiposFerramenta.length+')'}</button>
+  ${mostrarTiposFerramenta?tiposFerramenta.map(tipo=>{
+    const unidades=dados.ferramentas.filter(f=>f.tipo===tipo), d=unidades.filter(f=>f.status==='Disponível').length;
+    return `<div class="card"><div class="info"><div class="nome">${esc(tipo)}</div><div class="detalhe">${d} disponível(is) de ${unidades.length}</div></div></div>`;}).join(''):''}
+  <div class="titulo-secao" style="margin-top:18px"><h2>Materiais cadastrados</h2><span class="contador">${tiposMaterial.length}</span></div>
+  <button class="mostrar roxo" onclick="alternarTiposMaterial()">${mostrarTiposMaterial?'Esconder materiais':'Mostrar materiais ('+tiposMaterial.length+')'}</button>
+  ${mostrarTiposMaterial?tiposMaterial.map(tipo=>{
+    const unidades=dados.materiais.filter(m=>m.tipo===tipo), d=unidades.filter(m=>m.status==='Disponível').length;
+    return `<div class="card"><div class="info"><div class="nome">${esc(tipo)}</div><div class="detalhe">${d} disponível(is) de ${unidades.length}</div></div></div>`;}).join(''):'<div class="vazio">Nenhum material cadastrado.</div>'}
+  <div class="titulo-secao" style="margin-top:18px"><h2>EPIs cadastrados</h2><span class="contador">${tiposEpi.length}</span></div>
+  <button class="mostrar roxo" onclick="alternarEpiCad()">${mostrarEpiCad?'Esconder EPIs':'Mostrar EPIs ('+tiposEpi.length+')'}</button>
+  ${mostrarEpiCad?tiposEpi.map(tipo=>{
+    const unidades=dados.epis.filter(e=>e.tipo===tipo), d=unidades.filter(e=>e.status==='Disponível').length;
+    return `<div class="card"><div class="info"><div class="nome">${esc(tipo)}</div><div class="detalhe">${d} disponível(is) de ${unidades.length}</div></div></div>`;}).join(''):'<div class="vazio">Nenhum EPI cadastrado.</div>'}
+  <div class="titulo-secao" style="margin-top:18px"><h2>Funcionários cadastrados</h2><span class="contador">${dados.pessoas.length}</span></div>
+  <button class="mostrar" onclick="alternarFuncionariosCad()">${mostrarFuncionariosCad?'Esconder funcionários':'Mostrar funcionários ('+dados.pessoas.length+')'}</button>
+  ${mostrarFuncionariosCad?dados.pessoas.map(p=>`<div class="card"><div class="info"><div class="nome">${esc(p.nome)}</div></div></div>`).join(''):''}`;
+}
+async function cadastrarFerramenta(){
+  const tipo=document.getElementById('nomeFerramenta').value.trim(), qtd=parseInt(document.getElementById('qtdFerramenta').value)||1;
+  if(!tipo){alert('Informe o nome da ferramenta.');return;}
+  if(qtd<1){alert('A quantidade deve ser pelo menos 1.');return;}
+  const arquivo=document.getElementById('fotoFerramenta').files[0];
+  let foto=null;
+  if(arquivo){
+    const nomeArquivo=`ferramentas/${Date.now()}-${arquivo.name}`;
+    const {error}=await supabase.storage.from('fotos').upload(nomeArquivo,arquivo);
+    if(error){tratarErro(error);return;}
+    foto=supabase.storage.from('fotos').getPublicUrl(nomeArquivo).data.publicUrl;
+  }
+  const existentes=dados.ferramentas.filter(f=>normalizar(f.tipo)===normalizar(tipo)).length;
+  const registros=[];for(let i=1;i<=qtd;i++)registros.push({nome:`${tipo} ${existentes+i}`,tipo,foto,status:'Disponível',pessoa:null,saida:null});
+  const {error}=await supabase.from('ferramentas').insert(registros);
+  if(error){tratarErro(error);return;}
+  await carregarDados();alert(`${qtd} unidade(s) de ${tipo} cadastradas com sucesso.`);
+}
+async function cadastrarMaterialCad(){
+  const tipo=document.getElementById('nomeMaterialCad').value.trim(), qtd=parseInt(document.getElementById('qtdMaterialCad').value)||1;
+  if(!tipo){alert('Informe o nome do material.');return;}
+  if(qtd<1){alert('A quantidade deve ser pelo menos 1.');return;}
+  const registros=[];for(let i=1;i<=qtd;i++)registros.push({nome:qtd>1?`${tipo} ${i}`:tipo,tipo,status:'Disponível',pessoa:null,saida:null});
+  const {error}=await supabase.from('materiais').insert(registros);
+  if(error){tratarErro(error);return;}
+  await carregarDados();alert(`${qtd} unidade(s) de ${tipo} cadastradas com sucesso.`);
+}
+async function cadastrarEpiCad(){
+  const tipo=document.getElementById('nomeEpiCad').value.trim(), qtd=parseInt(document.getElementById('qtdEpiCad').value)||1;
+  if(!tipo){alert('Informe o nome do EPI.');return;}
+  if(qtd<1){alert('A quantidade deve ser pelo menos 1.');return;}
+  const registros=[];for(let i=1;i<=qtd;i++)registros.push({nome:qtd>1?`${tipo} ${i}`:tipo,tipo,status:'Disponível',pessoa:null,data_retirada:null});
+  const {error}=await supabase.from('epis').insert(registros);
+  if(error){tratarErro(error);return;}
+  await carregarDados();alert(`${qtd} unidade(s) de ${tipo} cadastradas com sucesso.`);
+}
+async function cadastrarPessoaCad(){
+  const nome=document.getElementById('nomePessoaCad').value.trim();
+  if(!nome){alert('Informe o nome do funcionário.');return;}
+  if(dados.pessoas.some(p=>normalizar(p.nome)===normalizar(nome))){alert('Este funcionário já está cadastrado.');return;}
+  const {error}=await supabase.from('funcionarios').insert({nome});
+  if(error){tratarErro(error);return;}
+  await carregarDados();
+}
+
+carregarDados();
+</script>
+</body>
+</html>
